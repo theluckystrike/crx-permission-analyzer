@@ -1,0 +1,30 @@
+{
+  "name": "@zovo/crx-permission-analyzer",
+  "version": "1.0.0",
+  "description": "Analyze Chrome extension permissions and flag dangerous combinations",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "crx-permission-analyzer": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "cli": "node ./dist/cli.js"
+  },
+  "keywords": [
+    "chrome-extension",
+    "permissions",
+    "security",
+    "crx",
+    "analyzer"
+  ],
+  "author": "Zovo",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^3.0.0"
+  }
+}
