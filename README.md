@@ -1,130 +1,94 @@
 # @zovo/crx-permission-analyzer
 
-> Analyze Chrome extension permissions and flag dangerous combinations
+[![CI](https://github.com/theluckystrike/crx-permission-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/theluckystrike/crx-permission-analyzer/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A CLI + library tool that analyzes Chrome extension manifest.json files and outputs risk assessments.
+Analyze Chrome extension permissions and flag dangerous combinations. CLI tool and Node.js library that reads `manifest.json`, scores each permission by risk level, detects dangerous permission pairings, and outputs a human-readable or JSON report.
 
-## Features
-
-- 📊 **Risk Scoring** - Calculate overall risk score based on permissions
-- ⚠️ **Dangerous Combinations** - Detect dangerous permission combinations
-- 📝 **Plain English Descriptions** - Explains what each permission allows
-- 🔍 **Multiple Output Formats** - Human-readable or JSON output
-- 🧪 **Well Tested** - Comprehensive test coverage with vitest
-- 📦 **Dual Interface** - Use as CLI tool or import as library
-
-## Installation
+## Install
 
 ```bash
 npm install @zovo/crx-permission-analyzer
 ```
 
-Or run directly with npx:
+## Quick Start
+
+### CLI
 
 ```bash
 npx @zovo/crx-permission-analyzer manifest.json
+
+# JSON output
+npx @zovo/crx-permission-analyzer manifest.json --json
+
+# Exclude optional permissions
+npx @zovo/crx-permission-analyzer manifest.json --no-optional
 ```
 
-## CLI Usage
+The CLI exits with code 1 when risk level is `high` or `critical`, making it suitable for CI pipelines.
 
-### Basic Analysis
-
-```bash
-crx-permission-analyzer manifest.json
-```
-
-### JSON Output
-
-```bash
-crx-permission-analyzer manifest.json --json
-```
-
-### Exclude Optional Permissions
-
-```bash
-crx-permission-analyzer manifest.json --no-optional
-```
-
-## Library Usage
+### Library
 
 ```typescript
-import { analyze, formatHuman } from '@zovo/crx-permission-analyzer';
+import { analyze, analyzePermissions, formatHuman, formatJson } from '@zovo/crx-permission-analyzer';
 
-// Analyze a manifest
+// Analyze from a manifest file
 const result = await analyze('./manifest.json');
-
-console.log(`Risk Level: ${result.riskLevel}`);
-console.log(`Risk Score: ${result.riskScore}`);
-
-// Print human-readable report
+console.log(`Risk: ${result.riskLevel} (score: ${result.riskScore})`);
 console.log(formatHuman(result));
+
+// Analyze raw permission arrays
+const result2 = analyzePermissions(
+  ['tabs', 'cookies'],
+  ['bookmarks'],
+  ['https://*/*']
+);
+console.log(formatJson(result2));
 ```
 
-### API Reference
+## API
 
-#### `analyze(manifestPath: string, options?: AnalysisOptions): Promise<PermissionAnalysis>`
+### `analyze(manifestPath, options?)`
 
-Analyzes a manifest.json file and returns a permission analysis.
+Reads a `manifest.json` file and returns a full permission analysis.
 
-**Parameters:**
-- `manifestPath` - Path to the extension's manifest.json file
-- `options` - Optional analysis options
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `manifestPath` | `string` | Path to manifest.json |
+| `options.outputFormat` | `'json' \| 'human'` | Output format (default: `'human'`) |
+| `options.includeOptional` | `boolean` | Include optional permissions (default: `true`) |
 
-**Returns:** `Promise<PermissionAnalysis>`
+Returns `Promise<PermissionAnalysis>`.
 
-#### `formatHuman(analysis: PermissionAnalysis): string`
+### `analyzePermissions(permissions, optionalPermissions?, hostPermissions?)`
 
-Formats the analysis as a human-readable report.
+Analyzes raw permission arrays without reading a file. Returns `PermissionAnalysis`.
 
-#### `formatJson(analysis: PermissionAnalysis): string`
+### `parseManifest(manifestPath)`
 
-Formats the analysis as JSON.
+Extracts `permissions`, `optionalPermissions`, and `hostPermissions` arrays from a manifest file.
 
-## Permission Risk Levels
+### `formatHuman(analysis)` / `formatJson(analysis)`
 
-| Level | Description |
-|-------|-------------|
-| 🟢 LOW | Minimal privacy/security impact (e.g., storage, alarms) |
-| 🟡 MEDIUM | Some privacy or functionality impact (e.g., bookmarks, topSites) |
-| 🟠 HIGH | Significant security or privacy risk (e.g., cookies, tabs, scripting) |
-| 🔴 CRITICAL | Severe security risk, potentially malicious (e.g., <all_urls> + webRequest) |
+Format a `PermissionAnalysis` result as human-readable text or JSON string.
 
-## Dangerous Combinations
+## Risk Levels
 
-The analyzer automatically detects these dangerous permission combinations:
+| Level | Score | Examples |
+|-------|-------|---------|
+| LOW | 1 | `storage`, `alarms`, `activeTab`, `notifications` |
+| MEDIUM | 2 | `bookmarks`, `downloads`, `webNavigation`, `identity` |
+| HIGH | 5 | `cookies`, `tabs`, `scripting`, `history`, `geolocation` |
+| CRITICAL | 10 | `<all_urls>`, `debugger`, `proxy`, `nativeMessaging` |
 
-- `<all_urls>` + `webRequest` - Traffic interception
-- `<all_urls>` + `cookies` - Session theft
-- `tabs` + `scripting` - Page modification
-- And many more...
+Dangerous combinations (e.g. `<all_urls>` + `cookies`) add bonus points to the score.
 
-## Risk Score
+## Related
 
-The risk score is calculated by summing weights:
-
-- Critical: 10 points
-- High: 5 points
-- Medium: 2 points
-- Low: 1 point
-
-Bonus points are added for dangerous combinations.
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Run tests
-npm test
-
-# Build
-npm run build
-
-# Run CLI locally
-npm run cli -- manifest.json
-```
+- [crx-manifest-validator](https://github.com/theluckystrike/crx-manifest-validator) -- Validate manifest.json files
+- [crx-extension-size-analyzer](https://github.com/theluckystrike/crx-extension-size-analyzer) -- Analyze extension bundle size
+- [chrome-extension-starter-mv3](https://github.com/theluckystrike/chrome-extension-starter-mv3) -- Production-ready MV3 starter template
 
 ## License
 
-MIT
+MIT -- [Zovo](https://zovo.one)
