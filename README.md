@@ -1,127 +1,134 @@
-# @zovo/crx-permission-analyzer
+# crx-permission-analyzer
 
-[![npm version](https://img.shields.io/npm/v/@zovo/crx-permission-analyzer.svg)](https://npmjs.com/package/@zovo/crx-permission-analyzer)
-[![CI](https://github.com/theluckystrike/crx-permission-analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/theluckystrike/crx-permission-analyzer/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
-[![Discord](https://img.shields.io/badge/Discord-Zovo-blueviolet.svg?logo=discord)](https://discord.gg/zovo)
-[![Website](https://img.shields.io/badge/Website-zovo.one-blue)](https://zovo.one)
+Analyze Chrome extension permissions and flag dangerous combinations. A CLI tool and Node.js library that reads manifest.json, scores each permission by risk level, detects dangerous permission pairings, and outputs a human-readable or JSON report.
 
-> Analyze Chrome extension permissions and flag dangerous combinations. CLI tool and Node.js library that reads `manifest.json`, scores each permission by risk level, detects dangerous permission pairings, and outputs a human-readable or JSON report.
+Supports Manifest V2 and V3. The CLI exits with code 1 when the risk level is high or critical, making it suitable for CI pipelines.
 
-Part of the [Zovo](https://zovo.one) family of privacy-first Chrome extension developer tools.
 
-## Install
+INSTALL
 
 ```bash
-npm install @zovo/crx-permission-analyzer
+npm install crx-permission-analyzer
 ```
 
-## Quick Start
 
-### CLI
+CLI USAGE
 
 ```bash
-npx @zovo/crx-permission-analyzer manifest.json
+crx-permission-analyzer manifest.json
 
-# JSON output
-npx @zovo/crx-permission-analyzer manifest.json --json
+crx-permission-analyzer manifest.json --json
 
-# Exclude optional permissions
-npx @zovo/crx-permission-analyzer manifest.json --no-optional
+crx-permission-analyzer manifest.json --no-optional
 ```
 
-The CLI exits with code 1 when risk level is `high` or `critical`, making it suitable for CI pipelines.
+CLI flags
 
-### Library
+    -h, --help         Show help
+    -j, --json         Output in JSON format
+    -r, --human        Output in human-readable format (default)
+    --no-optional      Exclude optional permissions from analysis
+
+
+LIBRARY USAGE
 
 ```typescript
-import { analyze, analyzePermissions, formatHuman, formatJson } from '@zovo/crx-permission-analyzer';
+import { analyze, analyzePermissions, formatHuman, formatJson } from 'crx-permission-analyzer';
 
 // Analyze from a manifest file
 const result = await analyze('./manifest.json');
-console.log(`Risk: ${result.riskLevel} (score: ${result.riskScore})`);
+console.log(result.riskLevel);
 console.log(formatHuman(result));
 
-// Analyze raw permission arrays
+// Analyze raw permission arrays directly
 const result2 = analyzePermissions(
-  ['tabs', 'cookies'],
-  ['bookmarks'],
-  ['https://*/*']
+  ['tabs', 'cookies'],       // required permissions
+  ['bookmarks'],             // optional permissions
+  ['https://*/*']            // host permissions
 );
 console.log(formatJson(result2));
 ```
 
-## API
 
-### `analyze(manifestPath, options?)`
+API
 
-Reads a `manifest.json` file and returns a full permission analysis.
+analyze(manifestPath, options?)
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `manifestPath` | `string` | Path to manifest.json |
-| `options.outputFormat` | `'json' \| 'human'` | Output format (default: `'human'`) |
-| `options.includeOptional` | `boolean` | Include optional permissions (default: `true`) |
+Reads a manifest.json file and returns a full permission analysis. Options include outputFormat ('json' or 'human', default 'human') and includeOptional (boolean, default true). Returns Promise<PermissionAnalysis>.
 
-Returns `Promise<PermissionAnalysis>`.
+analyzePermissions(permissions, optionalPermissions?, hostPermissions?)
 
-### `analyzePermissions(permissions, optionalPermissions?, hostPermissions?)`
+Analyzes raw permission arrays without reading a file. Accepts required permissions, optional permissions, and host permissions as separate string arrays. Returns PermissionAnalysis.
 
-Analyzes raw permission arrays without reading a file. Returns `PermissionAnalysis`.
+parseManifest(manifestPath)
 
-### `parseManifest(manifestPath)`
+Extracts permissions, optionalPermissions, and hostPermissions arrays from a manifest.json file. Handles both V2 style (permissions with URLs mixed in) and V3 style (separate host_permissions field).
 
-Extracts `permissions`, `optionalPermissions`, and `hostPermissions` arrays from a manifest file.
+formatHuman(analysis)
 
-### `formatHuman(analysis)` / `formatJson(analysis)`
+Formats a PermissionAnalysis result as a human-readable report with risk levels and color indicators.
 
-Format a `PermissionAnalysis` result as human-readable text or JSON string.
+formatJson(analysis)
 
-## Risk Levels
+Formats a PermissionAnalysis result as a pretty-printed JSON string.
 
-| Level | Score | Examples |
-|-------|-------|---------|
-| LOW | 1 | `storage`, `alarms`, `activeTab`, `notifications` |
-| MEDIUM | 2 | `bookmarks`, `downloads`, `webNavigation`, `identity` |
-| HIGH | 5 | `cookies`, `tabs`, `scripting`, `history`, `geolocation` |
-| CRITICAL | 10 | `<all_urls>`, `debugger`, `proxy`, `nativeMessaging` |
 
-Dangerous combinations (e.g. `<all_urls>` + `cookies`) add bonus points to the score.
+RISK LEVELS
 
-## See Also
+    LOW (score 1)        storage, alarms, activeTab, notifications, contextMenus
+    MEDIUM (score 2)     bookmarks, downloads, webNavigation, identity, sessions
+    HIGH (score 5)       cookies, tabs, scripting, history, geolocation, privacy
+    CRITICAL (score 10)  <all_urls>, debugger, proxy, nativeMessaging, downloads.open
 
-### Related Zovo Repositories
+Dangerous combinations like <all_urls> + cookies or tabs + scripting add bonus points to the total risk score. The library ships with 20 predefined dangerous combination rules.
 
-- [crx-manifest-validator](https://github.com/theluckystrike/crx-manifest-validator) - Validate manifest.json files
-- [crx-extension-size-analyzer](https://github.com/theluckystrike/crx-extension-size-analyzer) - Analyze extension bundle size
-- [chrome-extension-starter-mv3](https://github.com/theluckystrike/chrome-extension-starter-mv3) - Production-ready MV3 starter template
-- [chrome-storage-plus](https://github.com/theluckystrike/chrome-storage-plus) - Type-safe storage wrapper
+Overall risk level thresholds are low (below 5), medium (5 to 9), high (10 to 19), and critical (20 or above).
 
-### Zovo Chrome Extensions
 
-- [Zovo Tab Manager](https://chrome.google.com/webstore/detail/zovo-tab-manager) - Manage tabs efficiently
-- [Zovo Focus](https://chrome.google.com/webstore/detail/zovo-focus) - Block distractions
-- [Zovo Permissions Scanner](https://chrome.google.com/webstore/detail/zovo-permissions-scanner) - Check extension privacy grades
+PERMISSION DATABASE
 
-Visit [zovo.one](https://zovo.one) for more information.
+The analyzer includes a built-in database covering 50+ Chrome extension permissions across these categories.
 
-## Contributing
+    host           Host pattern permissions like <all_urls>
+    api            General Chrome API permissions
+    clipboard      Clipboard read and write access
+    storage        Local and unlimited storage
+    network        Proxy, VPN, and declarativeNetRequest
+    tab            Tab access, capture, and grouping
+    bookmark       Bookmark read and write
+    download       Download management and file opening
+    geolocation    Physical location tracking
+    notification   Desktop notification access
+    privacy        Privacy settings and browsing data
+    debugging      Chrome DevTools debugger protocol
+    management     Extension and app management
+    experimental   Experimental Chrome APIs
 
-Contributions are welcome! Please follow these steps:
+Unknown permissions not in the database are treated as medium risk.
 
-1. **Fork** the repository
-2. **Create** a feature branch: `git checkout -b feature/permission-analysis`
-3. **Make** your changes and add tests
-4. **Test** your changes: `npm test`
-5. **Commit** your changes: `git commit -m 'Add new feature'`
-6. **Push** to the branch: `git push origin feature/permission-analysis`
-7. **Submit** a Pull Request
 
-## License
+DEVELOPMENT
 
-MIT — [Zovo](https://zovo.one)
+```bash
+git clone https://github.com/theluckystrike/crx-permission-analyzer.git
+cd crx-permission-analyzer
+npm install
+npm test
+npm run build
+```
+
+The project uses TypeScript with strict mode, Vitest for testing, and targets ES2022. Node 18 or later is required.
+
+
+CONTRIBUTING
+
+See CONTRIBUTING.md for guidelines on submitting issues and pull requests.
+
+
+LICENSE
+
+MIT. See LICENSE file for details.
 
 ---
 
-*Built by developers, for developers. No compromises on privacy.*
+Built by theluckystrike. Visit zovo.one for more tools.
